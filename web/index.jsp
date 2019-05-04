@@ -1,13 +1,18 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
+<%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%
+    // 测试访问路径 http://localhost:8080/index.jsp?active=index&token=e10adc3949ba59abbe56e057f20f883e
+
     // jsp 获取url参数token做最简单的登录权限控制 例如用 123456的MD5 e10adc3949ba59abbe56e057f20f883e
     if (!"e10adc3949ba59abbe56e057f20f883e".equalsIgnoreCase(request.getParameter("token"))) {
         out.print("{'msg':'error','code':'403'}");
         return;
     }
+    String active = request.getParameter("active");
     // 基本信息配置
-    request.setAttribute("logPath","C:\\Users\\Administrator\\Documents\\nginx\\logs\\");
-    request.setAttribute("configPath","C:\\Users\\Administrator\\Documents\\nginx\\conf\\");
+    request.setAttribute("logPath", "C:\\Users\\Administrator\\Documents\\nginx\\logs\\");
+    request.setAttribute("configPath", "C:\\Users\\Administrator\\Documents\\nginx\\conf\\");
+    request.setAttribute("active", active == null ? active : "index");
 %>
 <html lang="zh-CN">
 <head>
@@ -91,19 +96,19 @@
     </style>
 </head>
 <body>
-
-
 <div class="am-g">
     <div class="am-u-md-11 am-u-md-push-1">
         <div class="am-g">
             <div class="am-u-sm-11 am-u-sm-centered">
                 <div class="am-cf am-article">
-                    展示部分
+                    <c:if test="active == \"index\""><h1>首页</h1></c:if>
+                    <c:if test=" active== \"config\""><h1>配置</h1></c:if>
+                    <c:if test="active == \"monitor\""><h1>监控</h1></c:if>
                 </div>
             </div>
         </div>
     </div>
-    <div class="am-u-md-1 am-u-md-pull-11 my-sidebar">
+    <div class=" am-u-md-1 am-u-md-pull-11 my-sidebar">
         <div class="am-offcanvas" id="sidebar">
             <div class="am-offcanvas-bar">
                 <ul class="am-nav">
@@ -111,17 +116,18 @@
                     <li><a href="#">首页</a></li>
                     <li><a href="#">配置</a></li>
                     <li><a href="#">日志</a></li>
-                </ul>
+                    </ul>
+                </div>
             </div>
         </div>
-    </div>
-    <a href="#sidebar" class="am-btn am-btn-sm am-btn-success am-icon-bars am-show-sm-only my-button" data-am-offcanvas><span
-            class="am-sr-only">侧栏导航</span></a>
-    <%-- 用七牛云免费的 AmazeUI https cdn --%>
-    <script src="https://cdn.staticfile.org/jquery/2.2.4/jquery.min.js"></script>
-    <script src="https://cdn.staticfile.org/amazeui/2.7.2/js/amazeui.min.js"></script>
-    <script>
-        <%-- 直接在jsp里写 js --%>
-    </script>
+        <a href="#sidebar" class="am-btn am-btn-sm am-btn-success am-icon-bars am-show-sm-only my-button"
+           data-am-offcanvas><span
+                class="am-sr-only">侧栏导航</span></a>
+        <%-- 用七牛云免费的 AmazeUI https cdn --%>
+        <script src="https://cdn.staticfile.org/jquery/2.2.4/jquery.min.js"></script>
+        <script src="https://cdn.staticfile.org/amazeui/2.7.2/js/amazeui.min.js"></script>
+        <script>
+            <%-- 直接在jsp里写 js --%>
+        </script>
 </body>
 </html>
