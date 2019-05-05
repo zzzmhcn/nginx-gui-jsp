@@ -4,7 +4,7 @@
 
 <%
     /**
-     * 访问路径
+     * 测试访问路径
      * http://localhost:8080/index.jsp?active=index&token=e10adc3949ba59abbe56e057f20f883e
      *
      * 参数
@@ -17,15 +17,17 @@
     String token = request.getParameter("token");
     String active = request.getParameter("active");
     if (!"e10adc3949ba59abbe56e057f20f883e".equalsIgnoreCase(token)) {
-        out.print("{'msg':'error','code':'403'}");
+        // 防止被扫到 token 不正确直接404
+        response.sendError(404);
         return;
     }
     active = active == null ? "index" : active;
     // 基本信息配置
-    request.setAttribute("nginxLogPath", "C:\\Users\\Administrator\\Documents\\nginx\\logs\\");
-    request.setAttribute("nginxConfigPath", "C:\\Users\\Administrator\\Documents\\nginx\\conf\\");
     request.setAttribute("active", active);
     request.setAttribute("token", token);
+    request.setAttribute("nginxLogPath", "C:\\Users\\Administrator\\IdeaProjects\\nginx-gui-jsp\\testData\\nginx\\logs\\");
+    request.setAttribute("nginxConfigPath", "C:\\Users\\Administrator\\IdeaProjects\\nginx-gui-jsp\\testData\\nginx\\conf\\");
+    request.setAttribute("nginxStatusUrl", "https://bz.zzzmh.cn/nginx/status");
 %>
 <html lang="zh-CN">
 <head>
@@ -108,7 +110,7 @@
             border-right: 1px solid #eeeeee;
         }
 
-        .am-breadcrumb{
+        .am-breadcrumb {
             /*padding-bottom: 0px;*/
             margin-bottom: 0px;
         }
@@ -141,26 +143,28 @@
                     </c:if>
                     <c:if test="${active == 'nginxConfig'}">
                         <div class="am-u-md-12">
-                            <button type="button" class="am-btn am-btn-primary" onclick="{
+                            <button type="button" class="am-btn am-btn-primary am-btn-xs" onclick="{
                                 $('#nginx-config code').attr('contentEditable',true);
                                 $('#nginx-config code').focus();
-                            }">编辑</button>
-                            <button type="button" class="am-btn am-btn-danger" onclick="{
+                            }">编辑
+                            </button>
+                            <button type="button" class="am-btn am-btn-danger am-btn-xs" onclick="{
                                 $('#nginx-config code').attr('contentEditable',false);
-                            }">取消</button>
-                            <button type="button" class="am-btn am-btn-success">保存</button>
-                            <button type="button" class="am-btn am-btn-warning">校验</button>
-                            <button type="button" class="am-btn am-btn-secondary">生效</button>
+                            }">取消
+                            </button>
+                            <button type="button" class="am-btn am-btn-success am-btn-xs">保存</button>
+                            <button type="button" class="am-btn am-btn-warning am-btn-xs">校验</button>
+                            <button type="button" class="am-btn am-btn-secondary am-btn-xs">生效</button>
                         </div>
                         <div class="am-u-md-12">
                             <pre id="nginx-config" class=""><code class="nginx"><%
-                                    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(
-                                            new FileInputStream(request.getAttribute("nginxConfigPath") + "nginx.conf"), "UTF-8"));
-                                    String temp = null;
-                                    while ((temp = bufferedReader.readLine()) != null) {
-                                        out.print(temp + "\n");
-                                    }
-                                %></code></pre>
+                                BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(
+                                        new FileInputStream(request.getAttribute("nginxConfigPath") + "nginx.conf"), "UTF-8"));
+                                String temp = null;
+                                while ((temp = bufferedReader.readLine()) != null) {
+                                    out.print(temp + "\n");
+                                }
+                            %></code></pre>
                         </div>
                     </c:if>
                     <c:if test="${active == 'nginxLogs'}">
@@ -187,7 +191,8 @@
                             href="?active=nginxConfig&token=${token}">配置</a></li>
                     <li class="${active == 'nginxLogs' ? 'am-active' : ''}"><a href="?active=nginxLogs&token=${token}">日志</a>
                     </li>
-                    <li class="${active == 'about' ? 'am-active' : ''}"><a href="?active=about&token=${token}">关于</a></li>
+                    <li class="${active == 'about' ? 'am-active' : ''}"><a href="?active=about&token=${token}">关于</a>
+                    </li>
                 </ul>
             </div>
         </div>
@@ -205,7 +210,9 @@
         $(function () {
             // 代码高亮初始化
             hljs.initHighlightingOnLoad();
+
         });
+
     </script>
 </body>
 </html>
