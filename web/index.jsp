@@ -4,13 +4,15 @@
 
 <%
     /**
-     * 依赖jstl 1.2 c标签
-     *
-     * 测试访问路径
+     * 访问路径
      * http://localhost:8080/index.jsp?active=index&token=e10adc3949ba59abbe56e057f20f883e
+     *
+     * 参数
      * active 指页面，默认index
      * token 指默认密码的md5 (目前写死在jsp)
-     * 其他基本信息配置在 request.setAttribute
+     *
+     * 其他基本信息位置
+     * request.setAttribute
      */
     String token = request.getParameter("token");
     String active = request.getParameter("active");
@@ -35,7 +37,7 @@
           href="data:image/png;base64,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">
     <%-- 用七牛云免费的 AmazeUI https cdn --%>
     <link href="https://cdn.staticfile.org/amazeui/2.7.2/css/amazeui.min.css" rel="stylesheet">
-    <link href="https://cdn.staticfile.org/highlight.js/9.15.6/styles/default.min.css" rel="stylesheet">
+    <link href="https://cdn.staticfile.org/highlight.js/9.15.6/styles/github.min.css" rel="stylesheet">
     <style>
         <%-- 直接在jsp里写 css --%>
         @media only screen and (min-width: 641px) {
@@ -127,6 +129,7 @@
                                 <c:if test="${active == 'nginxMonitor'}">Nginx 监控</c:if>
                                 <c:if test="${active == 'nginxConfig'}">Nginx 配置</c:if>
                                 <c:if test="${active == 'nginxLogs'}">Nginx 日志</c:if>
+                                <c:if test="${active == 'about'}">关于</c:if>
                             </li>
                         </ol>
                     </div>
@@ -139,11 +142,11 @@
                     <c:if test="${active == 'nginxConfig'}">
                         <div class="am-u-md-12">
                             <button type="button" class="am-btn am-btn-primary" onclick="{
-                                $('#nginx-config').attr('contentEditable',true);
-                                $('#nginx-config').focus();
+                                $('#nginx-config code').attr('contentEditable',true);
+                                $('#nginx-config code').focus();
                             }">编辑</button>
                             <button type="button" class="am-btn am-btn-danger" onclick="{
-                                $('#nginx-config').attr('contentEditable',false);
+                                $('#nginx-config code').attr('contentEditable',false);
                             }">取消</button>
                             <button type="button" class="am-btn am-btn-success">保存</button>
                             <button type="button" class="am-btn am-btn-warning">校验</button>
@@ -163,6 +166,9 @@
                     <c:if test="${active == 'nginxLogs'}">
                         <h1>Nginx日志</h1>
                     </c:if>
+                    <c:if test="${active == 'about'}">
+                        <h1>关于页</h1>
+                    </c:if>
                 </div>
             </div>
         </div>
@@ -181,6 +187,7 @@
                             href="?active=nginxConfig&token=${token}">配置</a></li>
                     <li class="${active == 'nginxLogs' ? 'am-active' : ''}"><a href="?active=nginxLogs&token=${token}">日志</a>
                     </li>
+                    <li class="${active == 'about' ? 'am-active' : ''}"><a href="?active=about&token=${token}">关于</a></li>
                 </ul>
             </div>
         </div>
