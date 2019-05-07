@@ -2,6 +2,7 @@
 <%@ page import="java.io.*" %>
 <%@ page import="java.util.regex.Pattern" %>
 <%@ page import="java.util.regex.Matcher" %>
+<%@ page import="java.text.SimpleDateFormat" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 
 <%
@@ -37,7 +38,8 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Nginx 控制台</title>
-    <link rel="icon" href="favicon.ico">
+    <link rel="icon"
+          href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAApVBMVEUAAQASEhIREREanEcBCxEeiDEitU4jt08ABwshsUwXkUUaciMgqUkLCwsiuU8gr0sfkjUWdzIRWSUiIiIAAgYkvlEcp0whrEkeoUUYZSAQUB8DGxINLAoECgQmxlYkwFMhs0wjrEUiqUIakkEUfj8Tfj8Sdz0QbTsagDIRaTAQZC4dhC0KSyoSXCgceycHPCUhISEIOR8VVxoPRRkNORIAEg8LIQd+wA5uAAAAi0lEQVQY01XPRxKDMBBE0QEZCdkgkASY6Jxzvv/RPFBF1fCXb9UN1hlkIfSPWteAJSdtIARnlHEVNwg+m8fgIrBpwIsWxtzrIVrWFORhLTwKonhK/qIwgb1a/RIKX6bODQW4S1luKMBO5ExSqHIZRBTgsughm926K9s0xel4rrx+oK0y5o3nrDvo8QcKqwnpsy5PdgAAAABJRU5ErkJggg==">
     <%-- 用七牛云免费的 AmazeUI https cdn --%>
     <link href="https://cdn.staticfile.org/amazeui/2.7.2/css/amazeui.min.css" rel="stylesheet">
     <link href="https://cdn.staticfile.org/highlight.js/9.15.6/styles/github.min.css" rel="stylesheet">
@@ -176,12 +178,14 @@
                     </c:if>
                     <c:if test="${active == 'nginxLogs'}">
                         <div class="am-u-md-12">
-                            <table class="am-table am-table-bordered am-table-radius am-table-striped">
+                            <table class="am-table am-table-bordered am-table-radius am-table-striped"
+                                   style="font-size: 12px">
                                 <thead>
                                 <tr>
-                                    <th>网站名称</th>
-                                    <th>网址</th>
-                                    <th>创建时间</th>
+                                    <th>IP</th>
+                                    <th>目标</th>
+                                    <th>状态</th>
+                                    <th>时间</th>
                                 </tr>
                                 </thead>
                                 <tbody>
@@ -190,23 +194,41 @@
                                     BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(
                                             new FileInputStream(request.getAttribute("nginxLogPath") + "access.log"), "UTF-8"));
                                     String temp = null;
-                                    while ((temp = bufferedReader.readLine()) != null) {
+                                    SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy:HH:mm:ss");
+                                    int maxLine = 100;
+                                    int count = 0;
+                                    while ((temp = bufferedReader.readLine()) != null && count <= maxLine) {
+//                                        try {
+                                        String tr = "";
+                                        String pattern = "^(\\d+\\.\\d+\\.\\d+\\.\\d+)\\s\\-\\s\\-\\s(\\[[^\\[\\]]+\\])\\s(\\\"(?:[^\"]|\\\")+|-\\\")\\s(\\d{3})\\s(\\d+|-)\\s(\\\"(?:[^\"]|\\\")+|-\\\")\\s(\\\"(?:[^\"]|\\\")+|-\\\")\\s(\\\"(?:[^\"]|\\\")+|-\\\")";
+                                        Pattern r = Pattern.compile(pattern);
+                                        Matcher m = r.matcher(temp);
                                         try {
-                                            String tr = "";
-                                            String pattern = "([^ ]*) ([^ ]*) ([^ ]*) (\\[.*\\]) (\".*?\") (-|[0-9]*) (-|[0-9]*) (\".*?\") (\".*?\")";
-                                            Pattern r = Pattern.compile(pattern);
-                                            Matcher m = r.matcher(temp);
-                                            tr += "<tr>";
-                                            for (int i = 1; i < 10; i++) {
+                                            if (m.find()) {
+                                                tr += "<tr>";
                                                 tr += "<td>";
-                                                m.group(i);
-                                                tr +=  "</td>";
+                                                tr += m.group(1);
+                                                tr += "</td>";
+
+                                                tr += "<td>";
+                                                tr += dateFormat.parse(m.group(2).substring(1,21));
+                                                tr += "</td>";
+
+                                                tr += "<td>";
+                                                tr += m.group(3);
+                                                tr += "</td>";
+                                                tr += "<td>";
+                                                tr += m.group(4);
+                                                tr += "</td>";
+
+
+                                                tr += "</tr>";
+                                                out.print(tr);
                                             }
-                                            tr += "</tr>";
-                                            out.print(tr);
                                         } catch (Exception e) {
                                             System.out.println(e.getLocalizedMessage());
                                         }
+                                        count++;
                                     }
                                     // 解析比较累 考虑到文件过大，可能存在性能问题
 
