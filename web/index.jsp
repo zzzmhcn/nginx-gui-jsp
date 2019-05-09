@@ -21,16 +21,20 @@
     String token = request.getParameter("token");
     String active = request.getParameter("active");
     String maxLine = request.getParameter("maxLine");
+    String onlyError = request.getParameter("onlyError");
     if (!"e10adc3949ba59abbe56e057f20f883e".equalsIgnoreCase(token)) {
         // 防止被扫到 token 不正确直接404
         response.sendError(404);
         return;
     }
     active = active == null ? "index" : active;
+    maxLine = maxLine == null ? "200" : maxLine;
+    onlyError = onlyError == null ? "0" : onlyError;
     // 基本信息配置
     request.setAttribute("active", active);
     request.setAttribute("token", token);
     request.setAttribute("maxLine", maxLine);
+    request.setAttribute("onlyError", onlyError);
     request.setAttribute("nginxLogPath", "C:\\Users\\Administrator\\IdeaProjects\\nginx-gui-jsp\\testData\\nginx\\logs\\");
     request.setAttribute("nginxConfigPath", "C:\\Users\\Administrator\\IdeaProjects\\nginx-gui-jsp\\testData\\nginx\\conf\\");
     request.setAttribute("nginxStatusUrl", "https://bz.zzzmh.cn/nginx/status");
@@ -41,8 +45,8 @@
     <meta http-equiv="X-UA-Compatible" content="IE=edge">
     <meta name="viewport" content="width=device-width, initial-scale=1">
     <title>Nginx 控制台</title>
-    <link rel="icon"
-          href="data:image/png;base64,iVBORw0KGgoAAAANSUhEUgAAABAAAAAQCAMAAAAoLQ9TAAAApVBMVEUAAQASEhIREREanEcBCxEeiDEitU4jt08ABwshsUwXkUUaciMgqUkLCwsiuU8gr0sfkjUWdzIRWSUiIiIAAgYkvlEcp0whrEkeoUUYZSAQUB8DGxINLAoECgQmxlYkwFMhs0wjrEUiqUIakkEUfj8Tfj8Sdz0QbTsagDIRaTAQZC4dhC0KSyoSXCgceycHPCUhISEIOR8VVxoPRRkNORIAEg8LIQd+wA5uAAAAi0lEQVQY01XPRxKDMBBE0QEZCdkgkASY6Jxzvv/RPFBF1fCXb9UN1hlkIfSPWteAJSdtIARnlHEVNwg+m8fgIrBpwIsWxtzrIVrWFORhLTwKonhK/qIwgb1a/RIKX6bODQW4S1luKMBO5ExSqHIZRBTgsughm926K9s0xel4rrx+oK0y5o3nrDvo8QcKqwnpsy5PdgAAAABJRU5ErkJggg==">
+    <link rel="icon" type="image/jpeg"
+          href="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAQABADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDtNXvNd8WSa5ZWV7HZQ6fKIEt14a6JLDBfPBO3gdDmqfhjW9a0SDQo7i5+02upXD232edSHt9rheG69+h9KPFGia1o0OuSW9t9ptdRuUuhcwMQ9uVYtyvXv1HpVrSrTXfF02h313Yx2UGnymZ7huDdElSSExwTt5PTn8K4/e5ut/8Ag/5HhfvPbdef52+L7tvl8z//2Q==">
     <%-- 用七牛云免费的 AmazeUI https cdn --%>
     <link href="https://cdn.staticfile.org/amazeui/2.7.2/css/amazeui.min.css" rel="stylesheet">
     <link href="https://cdn.staticfile.org/highlight.js/9.15.6/styles/github.min.css" rel="stylesheet">
@@ -181,7 +185,26 @@
                     </c:if>
                     <c:if test="${active == 'nginxLogs'}">
                         <div class="am-u-md-12">
-                            <table class="am-table am-table-bordered am-table-radius am-table-striped"
+                            <label>显示条数：</label>
+                            <select id="maxLine" data-am-selected="{btnSize: 'sm'}">
+                                <option value="200" ${maxLine == 200 ? 'selected': ''}>200</option>
+                                <option value="500" ${maxLine == 500 ? 'selected': ''}>500</option>
+                                <option value="1000" ${maxLine == 1000 ? 'selected': ''}>1000</option>
+                            </select>
+                            <label style="margin-left: 20px">只显示异常：</label>
+                            <select id="onlyError" data-am-selected="{btnSize: 'sm'}">
+                                <option value="0" ${onlyError == 0 ? 'selected': ''}>关闭</option>
+                                <option value="1" ${onlyError == 1 ? 'selected': ''}>开启</option>
+                            </select>
+                            <button type="button" style="margin-left: 20px" class="am-btn am-btn-secondary am-btn-xs"
+                                    onclick="{
+                                            window.location.href = 'index.jsp?active=nginxLogs&token=${token}'
+                                            + '&maxLine=' + $('#maxLine').val() + '&onlyError=' + $('#onlyError').val();
+                                            }">生效
+                            </button>
+                        </div>
+                        <div class="am-u-md-12">
+                            <table class="am-table am-table-bordered am-table-radius am-table-striped am-text-nowrap"
                                    style="font-size: 12px">
                                 <thead>
                                 <tr>
@@ -196,69 +219,82 @@
                                 </thead>
                                 <tbody>
                                 <%
-                                    // 读取配置文件
-                                    RandomAccessFile rf = new RandomAccessFile(request.getAttribute("nginxLogPath") + "access.log", "r");
+                                    String filename = request.getAttribute("nginxLogPath") + "access.log";
                                     String charset = "UTF-8";
-                                    long len = rf.length();
-                                    long start = rf.getFilePointer();
-                                    long nextend = start + len - 1;
-                                    String line;
-                                    rf.seek(nextend);
-                                    int c = -1;
                                     SimpleDateFormat dateFormat = new SimpleDateFormat("[dd/MMM/yyyy:HH:mm:ss Z]", Locale.ENGLISH);
                                     SimpleDateFormat sdf = new SimpleDateFormat("MM/dd HH:mm");
-                                    int count = 0;
-                                    while (nextend > start && count <= Integer.parseInt(maxLine)) {
-                                        count ++;
-                                        c = rf.read();
-                                        System.out.println("c:"+c);
-                                        if (c == '\n' || c == '\r') {
-                                            line = rf.readLine();
-                                            System.out.println("line:"+line);
-                                            if (line != null) {
-                                                try {
-                                                    String tr = "";
+                                    RandomAccessFile rf = null;
+                                    try {
+                                        rf = new RandomAccessFile(filename, "r");
+                                        long len = rf.length();
+                                        long start = rf.getFilePointer();
+                                        long nextend = start + len - 1;
+                                        String line;
+                                        rf.seek(nextend);
+                                        int c = -1;
+                                        int count = 0;
+                                        while (nextend > start && count <= Integer.parseInt(maxLine)) {
+                                            c = rf.read();
+                                            if (c == '\n' || c == '\r') {
+                                                line = rf.readLine();
+                                                if (line != null) {
+                                                    line = new String(line.getBytes("ISO-8859-1"), charset);
                                                     String pattern = "^(\\d+\\.\\d+\\.\\d+\\.\\d+)\\s\\-\\s\\-\\s(\\[[^\\[\\]]+\\])\\s(\\\"(?:[^\"]|\\\")+|-\\\")\\s(\\d{3})\\s(\\d+|-)\\s(\\\"(?:[^\"]|\\\")+|-\\\")\\s(\\\"(?:[^\"]|\\\")+|-\\\")\\s(\\\"(?:[^\"]|\\\")+|-\\\")";
                                                     Pattern r = Pattern.compile(pattern);
-                                                    Matcher m = r.matcher(new String(line
-                                                            .getBytes("ISO-8859-1"), charset));
+                                                    Matcher m = r.matcher(line);
+                                                    String tr = "";
                                                     if (m.find()) {
-                                                        tr += "<tr";
-                                                        if (!"200".equals(m.group(4))) {
-                                                            tr += " class='am-danger' ";
+                                                        if ("0".equals(request.getAttribute("onlyError")) && "200".equals(m.group(4)) || !"200".equals(m.group(4))) {
+                                                            tr += "<tr";
+                                                            if (!"200".equals(m.group(4))) {
+                                                                tr += " class='am-danger' ";
+                                                            }
+                                                            tr += "";
+                                                            tr += ">";
+                                                            tr += "<td>";
+                                                            tr += m.group(1);
+                                                            tr += "</td>";
+                                                            tr += "<td>";
+                                                            tr += sdf.format(dateFormat.parse(m.group(2)));
+                                                            tr += "</td>";
+                                                            tr += "<td>";
+                                                            tr += m.group(3);
+                                                            tr += "</td>";
+                                                            tr += "<td>";
+                                                            tr += m.group(4);
+                                                            tr += "</td>";
+                                                            tr += "<td>";
+                                                            tr += m.group(5);
+                                                            tr += "</td>";
+                                                            tr += "<td>";
+                                                            tr += m.group(6);
+                                                            tr += "</td>";
+                                                            tr += "<td title='" + m.group(7) + "'>";
+                                                            tr += m.group(7);
+                                                            tr += "</td>";
+                                                            tr += "</tr>";
+                                                            out.print(tr);
+                                                            count++;
                                                         }
-                                                        tr += "";
-                                                        tr += ">";
-                                                        tr += "<td>";
-                                                        tr += m.group(1);
-                                                        tr += "</td>";
-                                                        tr += "<td>";
-                                                        tr += sdf.format(dateFormat.parse(m.group(2)));
-                                                        tr += "</td>";
-                                                        tr += "<td>";
-                                                        tr += m.group(3);
-                                                        tr += "</td>";
-                                                        tr += "<td>";
-                                                        tr += m.group(4);
-                                                        tr += "</td>";
-                                                        tr += "<td>";
-                                                        tr += m.group(5);
-                                                        tr += "</td>";
-                                                        tr += "<td>";
-                                                        tr += m.group(6);
-                                                        tr += "</td>";
-                                                        tr += "<td>";
-                                                        tr += m.group(7);
-                                                        tr += "</td>";
-                                                        tr += "</tr>";
-                                                        out.print(tr);
                                                     }
-                                                    nextend--;
-                                                    rf.seek(nextend);
-                                                } catch (Exception e) {
-                                                    System.out.println(e.getMessage());
                                                 }
+                                                nextend--;
                                             }
+                                            nextend--;
+                                            rf.seek(nextend);
+                                            if (nextend == 0) {
+                                                System.out.println(new String(rf.readLine().getBytes(
+                                                        "ISO-8859-1"), charset));
+                                            }
+                                        }
+                                    } catch (Exception e) {
+                                        e.printStackTrace();
+                                    } finally {
+                                        try {
+                                            if (rf != null)
+                                                rf.close();
+                                        } catch (IOException e) {
+                                            e.printStackTrace();
                                         }
                                     }
                                 %>
