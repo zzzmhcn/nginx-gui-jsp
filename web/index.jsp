@@ -211,8 +211,10 @@
                                     while (nextend > start && count <= Integer.parseInt(maxLine)) {
                                         count ++;
                                         c = rf.read();
+                                        System.out.println("c:"+c);
                                         if (c == '\n' || c == '\r') {
                                             line = rf.readLine();
+                                            System.out.println("line:"+line);
                                             if (line != null) {
                                                 try {
                                                     String tr = "";
@@ -254,7 +256,7 @@
                                                     nextend--;
                                                     rf.seek(nextend);
                                                 } catch (Exception e) {
-//                                                    System.out.println(e.getMessage());
+                                                    System.out.println(e.getMessage());
                                                 }
                                             }
                                         }
