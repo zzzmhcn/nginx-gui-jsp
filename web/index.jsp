@@ -197,8 +197,6 @@
                                 <tbody>
                                 <%
                                     // 读取配置文件
-//                                    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(
-//                                            new FileInputStream(request.getAttribute("nginxLogPath") + "access.log"), "UTF-8"));
                                     RandomAccessFile rf = new RandomAccessFile(request.getAttribute("nginxLogPath") + "access.log", "r");
                                     String charset = "UTF-8";
                                     long len = rf.length();
@@ -209,7 +207,9 @@
                                     int c = -1;
                                     SimpleDateFormat dateFormat = new SimpleDateFormat("[dd/MMM/yyyy:HH:mm:ss Z]", Locale.ENGLISH);
                                     SimpleDateFormat sdf = new SimpleDateFormat("MM/dd HH:mm");
-                                    while (nextend > start) {
+                                    int count = 0;
+                                    while (nextend > start && count <= Integer.parseInt(maxLine)) {
+                                        count ++;
                                         c = rf.read();
                                         if (c == '\n' || c == '\r') {
                                             line = rf.readLine();
@@ -220,93 +220,45 @@
                                                     Pattern r = Pattern.compile(pattern);
                                                     Matcher m = r.matcher(new String(line
                                                             .getBytes("ISO-8859-1"), charset));
-                                                    try {
-                                                        if (m.find()) {
-                                                            tr += "<tr";
-                                                            if (!"200".equals(m.group(4))) {
-                                                                tr += " class='am-danger' ";
-                                                            }
-                                                            tr += "";
-                                                            tr += ">";
-                                                            tr += "<td>";
-                                                            tr += m.group(1);
-                                                            tr += "</td>";
-                                                            tr += "<td>";
-                                                            tr += sdf.format(dateFormat.parse(m.group(2)));
-                                                            tr += "</td>";
-                                                            tr += "<td>";
-                                                            tr += m.group(3);
-                                                            tr += "</td>";
-                                                            tr += "<td>";
-                                                            tr += m.group(4);
-                                                            tr += "</td>";
-                                                            tr += "<td>";
-                                                            tr += m.group(5);
-                                                            tr += "</td>";
-                                                            tr += "<td>";
-                                                            tr += m.group(6);
-                                                            tr += "</td>";
-                                                            tr += "<td>";
-                                                            tr += m.group(7);
-                                                            tr += "</td>";
-                                                            tr += "</tr>";
-                                                            out.print(tr);
+                                                    if (m.find()) {
+                                                        tr += "<tr";
+                                                        if (!"200".equals(m.group(4))) {
+                                                            tr += " class='am-danger' ";
                                                         }
-                                                    } catch (Exception e) {
-                                                        System.out.println(e.getLocalizedMessage());
+                                                        tr += "";
+                                                        tr += ">";
+                                                        tr += "<td>";
+                                                        tr += m.group(1);
+                                                        tr += "</td>";
+                                                        tr += "<td>";
+                                                        tr += sdf.format(dateFormat.parse(m.group(2)));
+                                                        tr += "</td>";
+                                                        tr += "<td>";
+                                                        tr += m.group(3);
+                                                        tr += "</td>";
+                                                        tr += "<td>";
+                                                        tr += m.group(4);
+                                                        tr += "</td>";
+                                                        tr += "<td>";
+                                                        tr += m.group(5);
+                                                        tr += "</td>";
+                                                        tr += "<td>";
+                                                        tr += m.group(6);
+                                                        tr += "</td>";
+                                                        tr += "<td>";
+                                                        tr += m.group(7);
+                                                        tr += "</td>";
+                                                        tr += "</tr>";
+                                                        out.print(tr);
                                                     }
                                                     nextend--;
                                                     rf.seek(nextend);
-                                                }catch (Exception e){
-                                                    System.out.println(e.getLocalizedMessage());
+                                                } catch (Exception e) {
+//                                                    System.out.println(e.getMessage());
                                                 }
                                             }
                                         }
-//                                    String temp = null;
-//                                    int count = 0;
-//                                    while ((temp = bufferedReader.readLine()) != null && count <= Integer.parseInt(maxLine)) {
-////                                        try {
-//                                        String tr = "";
-//                                        String pattern = "^(\\d+\\.\\d+\\.\\d+\\.\\d+)\\s\\-\\s\\-\\s(\\[[^\\[\\]]+\\])\\s(\\\"(?:[^\"]|\\\")+|-\\\")\\s(\\d{3})\\s(\\d+|-)\\s(\\\"(?:[^\"]|\\\")+|-\\\")\\s(\\\"(?:[^\"]|\\\")+|-\\\")\\s(\\\"(?:[^\"]|\\\")+|-\\\")";
-//                                        Pattern r = Pattern.compile(pattern);
-//                                        Matcher m = r.matcher(temp);
-//                                        try {
-//                                            if (m.find()) {
-//                                                tr += "<tr";
-//                                                if(!"200".equals(m.group(4))){
-//                                                    tr += " class='am-danger' ";
-//                                                }
-//                                                tr += "";
-//                                                tr += ">";
-//                                                tr += "<td>";
-//                                                tr += m.group(1);
-//                                                tr += "</td>";
-//                                                tr += "<td>";
-//                                                tr += sdf.format(dateFormat.parse(m.group(2)));
-//                                                tr += "</td>";
-//                                                tr += "<td>";
-//                                                tr += m.group(3);
-//                                                tr += "</td>";
-//                                                tr += "<td>";
-//                                                tr += m.group(4);
-//                                                tr += "</td>";
-//                                                tr += "<td>";
-//                                                tr += m.group(5);
-//                                                tr += "</td>";
-//                                                tr += "<td>";
-//                                                tr += m.group(6);
-//                                                tr += "</td>";
-//                                                tr += "<td>";
-//                                                tr += m.group(7);
-//                                                tr += "</td>";
-//                                                tr += "</tr>";
-//                                                out.print(tr);
-//                                            }
-//                                        } catch (Exception e) {
-//                                            System.out.println(e.getLocalizedMessage());
-//                                        }
-//                                        count++;
-//                                    }
+                                    }
                                 %>
                                 </tbody>
                             </table>
