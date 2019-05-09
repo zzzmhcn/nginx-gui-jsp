@@ -3,6 +3,7 @@
 <%@ page import="java.util.regex.Pattern" %>
 <%@ page import="java.util.regex.Matcher" %>
 <%@ page import="java.text.SimpleDateFormat" %>
+<%@ page import="java.util.Locale" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 
 <%
@@ -19,6 +20,7 @@
      */
     String token = request.getParameter("token");
     String active = request.getParameter("active");
+    String maxLine = request.getParameter("maxLine");
     if (!"e10adc3949ba59abbe56e057f20f883e".equalsIgnoreCase(token)) {
         // 防止被扫到 token 不正确直接404
         response.sendError(404);
@@ -28,6 +30,7 @@
     // 基本信息配置
     request.setAttribute("active", active);
     request.setAttribute("token", token);
+    request.setAttribute("maxLine", maxLine);
     request.setAttribute("nginxLogPath", "C:\\Users\\Administrator\\IdeaProjects\\nginx-gui-jsp\\testData\\nginx\\logs\\");
     request.setAttribute("nginxConfigPath", "C:\\Users\\Administrator\\IdeaProjects\\nginx-gui-jsp\\testData\\nginx\\conf\\");
     request.setAttribute("nginxStatusUrl", "https://bz.zzzmh.cn/nginx/status");
@@ -183,55 +186,127 @@
                                 <thead>
                                 <tr>
                                     <th>IP</th>
+                                    <th>时间</th>
                                     <th>目标</th>
                                     <th>状态</th>
-                                    <th>时间</th>
+                                    <th>消耗</th>
+                                    <th>主域</th>
+                                    <th>UA</th>
                                 </tr>
                                 </thead>
                                 <tbody>
                                 <%
                                     // 读取配置文件
-                                    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(
-                                            new FileInputStream(request.getAttribute("nginxLogPath") + "access.log"), "UTF-8"));
-                                    String temp = null;
-                                    SimpleDateFormat dateFormat = new SimpleDateFormat("dd/MM/yyyy:HH:mm:ss");
-                                    int maxLine = 100;
-                                    int count = 0;
-                                    while ((temp = bufferedReader.readLine()) != null && count <= maxLine) {
-//                                        try {
-                                        String tr = "";
-                                        String pattern = "^(\\d+\\.\\d+\\.\\d+\\.\\d+)\\s\\-\\s\\-\\s(\\[[^\\[\\]]+\\])\\s(\\\"(?:[^\"]|\\\")+|-\\\")\\s(\\d{3})\\s(\\d+|-)\\s(\\\"(?:[^\"]|\\\")+|-\\\")\\s(\\\"(?:[^\"]|\\\")+|-\\\")\\s(\\\"(?:[^\"]|\\\")+|-\\\")";
-                                        Pattern r = Pattern.compile(pattern);
-                                        Matcher m = r.matcher(temp);
-                                        try {
-                                            if (m.find()) {
-                                                tr += "<tr>";
-                                                tr += "<td>";
-                                                tr += m.group(1);
-                                                tr += "</td>";
-
-                                                tr += "<td>";
-                                                tr += dateFormat.parse(m.group(2).substring(1,21));
-                                                tr += "</td>";
-
-                                                tr += "<td>";
-                                                tr += m.group(3);
-                                                tr += "</td>";
-                                                tr += "<td>";
-                                                tr += m.group(4);
-                                                tr += "</td>";
-
-
-                                                tr += "</tr>";
-                                                out.print(tr);
+//                                    BufferedReader bufferedReader = new BufferedReader(new InputStreamReader(
+//                                            new FileInputStream(request.getAttribute("nginxLogPath") + "access.log"), "UTF-8"));
+                                    RandomAccessFile rf = new RandomAccessFile(request.getAttribute("nginxLogPath") + "access.log", "r");
+                                    String charset = "UTF-8";
+                                    long len = rf.length();
+                                    long start = rf.getFilePointer();
+                                    long nextend = start + len - 1;
+                                    String line;
+                                    rf.seek(nextend);
+                                    int c = -1;
+                                    SimpleDateFormat dateFormat = new SimpleDateFormat("[dd/MMM/yyyy:HH:mm:ss Z]", Locale.ENGLISH);
+                                    SimpleDateFormat sdf = new SimpleDateFormat("MM/dd HH:mm");
+                                    while (nextend > start) {
+                                        c = rf.read();
+                                        if (c == '\n' || c == '\r') {
+                                            line = rf.readLine();
+                                            if (line != null) {
+                                                try {
+                                                    String tr = "";
+                                                    String pattern = "^(\\d+\\.\\d+\\.\\d+\\.\\d+)\\s\\-\\s\\-\\s(\\[[^\\[\\]]+\\])\\s(\\\"(?:[^\"]|\\\")+|-\\\")\\s(\\d{3})\\s(\\d+|-)\\s(\\\"(?:[^\"]|\\\")+|-\\\")\\s(\\\"(?:[^\"]|\\\")+|-\\\")\\s(\\\"(?:[^\"]|\\\")+|-\\\")";
+                                                    Pattern r = Pattern.compile(pattern);
+                                                    Matcher m = r.matcher(new String(line
+                                                            .getBytes("ISO-8859-1"), charset));
+                                                    try {
+                                                        if (m.find()) {
+                                                            tr += "<tr";
+                                                            if (!"200".equals(m.group(4))) {
+                                                                tr += " class='am-danger' ";
+                                                            }
+                                                            tr += "";
+                                                            tr += ">";
+                                                            tr += "<td>";
+                                                            tr += m.group(1);
+                                                            tr += "</td>";
+                                                            tr += "<td>";
+                                                            tr += sdf.format(dateFormat.parse(m.group(2)));
+                                                            tr += "</td>";
+                                                            tr += "<td>";
+                                                            tr += m.group(3);
+                                                            tr += "</td>";
+                                                            tr += "<td>";
+                                                            tr += m.group(4);
+                                                            tr += "</td>";
+                                                            tr += "<td>";
+                                                            tr += m.group(5);
+                                                            tr += "</td>";
+                                                            tr += "<td>";
+                                                            tr += m.group(6);
+                                                            tr += "</td>";
+                                                            tr += "<td>";
+                                                            tr += m.group(7);
+                                                            tr += "</td>";
+                                                            tr += "</tr>";
+                                                            out.print(tr);
+                                                        }
+                                                    } catch (Exception e) {
+                                                        System.out.println(e.getLocalizedMessage());
+                                                    }
+                                                    nextend--;
+                                                    rf.seek(nextend);
+                                                }catch (Exception e){
+                                                    System.out.println(e.getLocalizedMessage());
+                                                }
                                             }
-                                        } catch (Exception e) {
-                                            System.out.println(e.getLocalizedMessage());
                                         }
-                                        count++;
-                                    }
-                                    // 解析比较累 考虑到文件过大，可能存在性能问题
-
+//                                    String temp = null;
+//                                    int count = 0;
+//                                    while ((temp = bufferedReader.readLine()) != null && count <= Integer.parseInt(maxLine)) {
+////                                        try {
+//                                        String tr = "";
+//                                        String pattern = "^(\\d+\\.\\d+\\.\\d+\\.\\d+)\\s\\-\\s\\-\\s(\\[[^\\[\\]]+\\])\\s(\\\"(?:[^\"]|\\\")+|-\\\")\\s(\\d{3})\\s(\\d+|-)\\s(\\\"(?:[^\"]|\\\")+|-\\\")\\s(\\\"(?:[^\"]|\\\")+|-\\\")\\s(\\\"(?:[^\"]|\\\")+|-\\\")";
+//                                        Pattern r = Pattern.compile(pattern);
+//                                        Matcher m = r.matcher(temp);
+//                                        try {
+//                                            if (m.find()) {
+//                                                tr += "<tr";
+//                                                if(!"200".equals(m.group(4))){
+//                                                    tr += " class='am-danger' ";
+//                                                }
+//                                                tr += "";
+//                                                tr += ">";
+//                                                tr += "<td>";
+//                                                tr += m.group(1);
+//                                                tr += "</td>";
+//                                                tr += "<td>";
+//                                                tr += sdf.format(dateFormat.parse(m.group(2)));
+//                                                tr += "</td>";
+//                                                tr += "<td>";
+//                                                tr += m.group(3);
+//                                                tr += "</td>";
+//                                                tr += "<td>";
+//                                                tr += m.group(4);
+//                                                tr += "</td>";
+//                                                tr += "<td>";
+//                                                tr += m.group(5);
+//                                                tr += "</td>";
+//                                                tr += "<td>";
+//                                                tr += m.group(6);
+//                                                tr += "</td>";
+//                                                tr += "<td>";
+//                                                tr += m.group(7);
+//                                                tr += "</td>";
+//                                                tr += "</tr>";
+//                                                out.print(tr);
+//                                            }
+//                                        } catch (Exception e) {
+//                                            System.out.println(e.getLocalizedMessage());
+//                                        }
+//                                        count++;
+//                                    }
                                 %>
                                 </tbody>
                             </table>
