@@ -4,24 +4,36 @@
 <%@ page import="java.util.regex.Matcher" %>
 <%@ page import="java.text.SimpleDateFormat" %>
 <%@ page import="java.util.Locale" %>
+<%@ page import="java.security.MessageDigest" %>
+<%@ page import="java.math.BigInteger" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 
 <%
     /**
      * 测试访问路径
-     * http://localhost:8080/index.jsp?active=index&token=e10adc3949ba59abbe56e057f20f883e
-     *
-     * 参数
-     * active 指页面，默认index
-     * token 指默认密码的md5 (目前写死在jsp)
-     *
-     * 其他基本信息位置
-     * request.setAttribute
+     * http://localhost:8080/index.jsp?p=123456
      */
-    String token = request.getParameter("token");
-    String active = request.getParameter("active");
-    String maxLine = request.getParameter("maxLine");
-    String onlyError = request.getParameter("onlyError");
+    // 当前页面
+    String active = request.getParameter("a");
+    // 最大日志行数
+    String maxLine = request.getParameter("m");
+    // 日志只显示错误信息
+    String onlyError = request.getParameter("o");
+    // 密码MD5
+    String pwd = request.getParameter("p");
+    String token = request.getParameter("t");
+    if (pwd == null && token == null) {
+        response.sendError(404);
+        return;
+    } else if (token == null && pwd != null) {
+        MessageDigest md = MessageDigest.getInstance("MD5");
+        md.update(pwd.getBytes());
+        byte[] secretBytes = md.digest();
+        token = new BigInteger(1, secretBytes).toString(16);
+        for (int i = 0; i < 32 - token.length(); i++) {
+            token = "0" + token;
+        }
+    }
     if (!"e10adc3949ba59abbe56e057f20f883e".equalsIgnoreCase(token)) {
         // 防止被扫到 token 不正确直接404
         response.sendError(404);
@@ -30,7 +42,7 @@
     active = active == null ? "index" : active;
     maxLine = maxLine == null ? "200" : maxLine;
     onlyError = onlyError == null ? "0" : onlyError;
-    // 基本信息配置
+    // 基本信息配置 首次使用需要更改
     request.setAttribute("active", active);
     request.setAttribute("token", token);
     request.setAttribute("maxLine", maxLine);
@@ -47,7 +59,7 @@
     <title>Nginx 控制台</title>
     <link rel="icon" type="image/jpeg"
           href="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAQABADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDtNXvNd8WSa5ZWV7HZQ6fKIEt14a6JLDBfPBO3gdDmqfhjW9a0SDQo7i5+02upXD232edSHt9rheG69+h9KPFGia1o0OuSW9t9ptdRuUuhcwMQ9uVYtyvXv1HpVrSrTXfF02h313Yx2UGnymZ7huDdElSSExwTt5PTn8K4/e5ut/8Ag/5HhfvPbdef52+L7tvl8z//2Q==">
-    <%-- 用七牛云免费的 AmazeUI https cdn --%>
+    <%-- 七牛云提供免费CDN AmazeUI https cdn --%>
     <link href="https://cdn.staticfile.org/amazeui/2.7.2/css/amazeui.min.css" rel="stylesheet">
     <link href="https://cdn.staticfile.org/highlight.js/9.15.6/styles/github.min.css" rel="stylesheet">
     <style>
@@ -55,7 +67,6 @@
             font: 14px/1.5 "Helvetica Neue", "Helvetica,Arial", "Microsoft Yahei", "Hiragino Sans GB", "HeitiSC", "WenQuanYi Micro Hei", sans-serif;
         }
 
-        <%-- 直接在jsp里写 css --%>
         @media only screen and (min-width: 641px) {
             .am-offcanvas {
                 display: block;
@@ -139,7 +150,7 @@
                 <div class="am-cf am-article">
                     <div class="am-u-md-12">
                         <ol class="am-breadcrumb">
-                            <li><a href="/?active=index&token=${token}">控制台</a></li>
+                            <li><a href="/?a=index&t=${token}">控制台</a></li>
                             <li class="am-active">
                                 <c:if test="${active == 'index'}">首页</c:if>
                                 <c:if test="${active == 'nginxMonitor'}">Nginx 监控</c:if>
@@ -184,27 +195,27 @@
                         </div>
                     </c:if>
                     <c:if test="${active == 'nginxLogs'}">
-                        <div class="am-u-md-12">
+                        <div class="am-u-md-12" style="margin-bottom: 6px;">
                             <label>显示条数：</label>
-                            <select id="maxLine" data-am-selected="{btnSize: 'sm'}">
+                            <select id="maxLine" data-am-selected="{btnSize: 'xs'}">
                                 <option value="200" ${maxLine == 200 ? 'selected': ''}>200</option>
-                                <option value="500" ${maxLine == 500 ? 'selected': ''}>500</option>
-                                <option value="1000" ${maxLine == 1000 ? 'selected': ''}>1000</option>
+                                <option value="400" ${maxLine == 400 ? 'selected': ''}>400</option>
+                                <option value="800" ${maxLine == 800 ? 'selected': ''}>800</option>
                             </select>
-                            <label style="margin-left: 20px">只显示异常：</label>
-                            <select id="onlyError" data-am-selected="{btnSize: 'sm'}">
+                            <label>只显示异常：</label>
+                            <select id="onlyError" data-am-selected="{btnSize: 'xs'}">
                                 <option value="0" ${onlyError == 0 ? 'selected': ''}>关闭</option>
                                 <option value="1" ${onlyError == 1 ? 'selected': ''}>开启</option>
                             </select>
-                            <button type="button" style="margin-left: 20px" class="am-btn am-btn-secondary am-btn-xs"
+                            <button type="button" class="am-btn am-btn-secondary am-btn-xs"
                                     onclick="{
-                                            window.location.href = 'index.jsp?active=nginxLogs&token=${token}'
-                                            + '&maxLine=' + $('#maxLine').val() + '&onlyError=' + $('#onlyError').val();
-                                            }">生效
+                                            window.location.href = 'index.jsp?a=nginxLogs&t=${token}'
+                                            + '&m=' + $('#maxLine').val() + '&o=' + $('#onlyError').val();
+                                            }">刷新
                             </button>
                         </div>
                         <div class="am-u-md-12">
-                            <table class="am-table am-table-bordered am-table-radius am-table-striped am-text-nowrap"
+                            <table class="am-table am-table-bordered am-table-radius am-table-striped am-text-nowrap am-scrollable-horizontal"
                                    style="font-size: 12px">
                                 <thead>
                                 <tr>
@@ -315,15 +326,15 @@
             <div class="am-offcanvas-bar">
                 <ul class="am-nav">
                     <li class="am-nav-header">NGINX</li>
-                    <li class="${active == 'index' ? 'am-active' : ''}"><a href="?active=index&token=${token}">首页</a>
+                    <li class="${active == 'index' ? 'am-active' : ''}"><a href="?a=index&t=${token}">首页</a>
                     </li>
                     <li class="${active == 'nginxMonitor' ? 'am-active' : ''}"><a
-                            href="?active=nginxMonitor&token=${token}">监控</a></li>
+                            href="?a=nginxMonitor&t=${token}">监控</a></li>
                     <li class="${active == 'nginxConfig' ? 'am-active' : ''}"><a
-                            href="?active=nginxConfig&token=${token}">配置</a></li>
-                    <li class="${active == 'nginxLogs' ? 'am-active' : ''}"><a href="?active=nginxLogs&token=${token}">日志</a>
+                            href="?a=nginxConfig&t=${token}">配置</a></li>
+                    <li class="${active == 'nginxLogs' ? 'am-active' : ''}"><a href="?a=nginxLogs&t=${token}">日志</a>
                     </li>
-                    <li class="${active == 'about' ? 'am-active' : ''}"><a href="?active=about&token=${token}">关于</a>
+                    <li class="${active == 'about' ? 'am-active' : ''}"><a href="?a=about&t=${token}">关于</a>
                     </li>
                 </ul>
             </div>
