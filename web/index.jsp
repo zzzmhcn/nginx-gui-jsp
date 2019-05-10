@@ -12,6 +12,8 @@
 <fmt:message key="nginxConfigPath" var="nginxConfigPath" bundle="${config}" scope="request"/>
 <fmt:message key="nginxStatusUrl" var="nginxStatusUrl" bundle="${config}" scope="request"/>
 <%
+    request.setCharacterEncoding("UTF-8");
+    response.setCharacterEncoding("UTF-8");
     // 密码 MD5 格式
     String token = request.getParameter("t");
     // 发现没带token参数 弹出请输入密码 再JS跳转回来
@@ -352,6 +354,7 @@
     <script src="https://cdn.staticfile.org/jquery/2.2.4/jquery.min.js"></script>
     <script src="https://cdn.staticfile.org/amazeui/2.7.2/js/amazeui.min.js"></script>
     <script src="https://cdn.staticfile.org/highlight.js/9.15.6/highlight.min.js"></script>
+    <script src="https://cdn.staticfile.org/Base64/1.0.2/base64.min.js"></script>
     <script>
         <%-- 直接在jsp里写 js --%>
         $(function () {
