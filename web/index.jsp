@@ -27,6 +27,7 @@
                 "</script>");
         return;
     }
+    // 密码校验与配置文件对比 WEB-INF/classes/config.properties
     if (!String.valueOf(request.getAttribute("md5Token")).equalsIgnoreCase(token)) {
         // 密码错误直接报403
         response.sendError(403);
@@ -46,6 +47,37 @@
     request.setAttribute("token", token);
     request.setAttribute("maxLine", maxLine);
     request.setAttribute("status", status);
+%>
+<%!
+    String[] nginx_version = {"nginx","-v"};
+    /**
+     * Java 执行shell命令方法
+     * 传入参数例子
+     * String[] command = {"java","-version"}
+     * String[] command = {"ssh","127.0.0.1","ps","-ef","|","grep","java"};
+     */
+    public String shell(String[] command) {
+        String result = "";
+        try {
+            ProcessBuilder pb = new ProcessBuilder();
+            pb.command(command);
+            pb.redirectErrorStream(true);
+            Process process = pb.start();
+            BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
+            while (true) {
+                String line = reader.readLine();
+                if(line == null) {
+                    break;
+                }
+                result += line + ' ';
+            }
+            process.destroy();
+            reader.close();
+        }catch (Exception e){
+            e.printStackTrace();
+        }
+        return result;
+    }
 %>
 <html lang="zh-CN">
 <head>
@@ -148,18 +180,13 @@
                             <li><a href="/?a=index&t=${token}">控制台</a></li>
                             <li class="am-active">
                                 <c:if test="${active == 'index'}">首页</c:if>
-                                <c:if test="${active == 'nginxMonitor'}">Nginx 监控</c:if>
-                                <c:if test="${active == 'nginxConfig'}">Nginx 配置</c:if>
-                                <c:if test="${active == 'nginxLogs'}">Nginx 日志</c:if>
-                                <c:if test="${active == 'about'}">关于</c:if>
+                                <c:if test="${active == 'nginxConfig'}">配置</c:if>
+                                <c:if test="${active == 'nginxLogs'}">日志</c:if>
                             </li>
                         </ol>
                     </div>
                     <c:if test="${active == 'index'}">
                         <h1>首页</h1>
-                    </c:if>
-                    <c:if test="${active == 'nginxMonitor'}">
-                        <h1>Nginx监控</h1>
                     </c:if>
                     <c:if test="${active == 'nginxConfig'}">
                         <div class="am-u-md-12">
@@ -330,9 +357,6 @@
                             </table>
                         </div>
                     </c:if>
-                    <c:if test="${active == 'about'}">
-                        <h1>关于页</h1>
-                    </c:if>
                 </div>
             </div>
         </div>
@@ -345,13 +369,9 @@
                     <li class="am-nav-header">NGINX</li>
                     <li class="${active == 'index' ? 'am-active' : ''}"><a href="?a=index&t=${token}">首页</a>
                     </li>
-                    <li class="${active == 'nginxMonitor' ? 'am-active' : ''}"><a
-                            href="?a=nginxMonitor&t=${token}">监控</a></li>
                     <li class="${active == 'nginxConfig' ? 'am-active' : ''}"><a
                             href="?a=nginxConfig&t=${token}">配置</a></li>
                     <li class="${active == 'nginxLogs' ? 'am-active' : ''}"><a href="?a=nginxLogs&t=${token}">日志</a>
-                    </li>
-                    <li class="${active == 'about' ? 'am-active' : ''}"><a href="?a=about&t=${token}">关于</a>
                     </li>
                 </ul>
             </div>
@@ -361,13 +381,17 @@
        data-am-offcanvas>
         <span class="am-sr-only">导航</span>
     </a>
-    <%-- 用七牛云免费的 AmazeUI https cdn --%>
+    <%-- 七牛云免费 cdn --%>
     <script src="https://cdn.staticfile.org/jquery/2.2.4/jquery.min.js"></script>
     <script src="https://cdn.staticfile.org/amazeui/2.7.2/js/amazeui.min.js"></script>
     <script src="https://cdn.staticfile.org/highlight.js/9.15.6/highlight.min.js"></script>
     <script src="https://cdn.staticfile.org/Base64/1.0.2/base64.min.js"></script>
     <script>
-        <%-- 直接在jsp里写 js --%>
+        // 顶部加载条效果
+        $.AMUI.progress.start();
+        window.onload = function () {
+            $.AMUI.progress.done();
+        }
         $(function () {
             // 代码高亮初始化
             hljs.initHighlightingOnLoad();
