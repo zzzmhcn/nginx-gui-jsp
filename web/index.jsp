@@ -1,4 +1,5 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
+<%@ page trimDirectiveWhitespaces="true" %>
 <%@ page import="java.io.*" %>
 <%@ page import="java.util.regex.Pattern" %>
 <%@ page import="java.util.regex.Matcher" %>
@@ -173,15 +174,25 @@
                             </button>
                             <button type="button" class="am-btn am-btn-success am-btn-xs" onclick="{
                                 // 调用service.jsp实现 把配置信息转base64回传到本页面
+                                if(confirm('修改Nginx配置有可能造成系统异常\n点击确认后操作不可逆\n是否确认？')){
+                                    var nc = window.btoa(window.encodeURIComponent($('#nginx-config').text()));
+                                    jQuery.post('service.jsp',{t:'${token}',m:'saveNc',nc:nc},function(res){
+                                        alert(res);
+                                        location.reload();
+                                    });
+                                }
                             }">保存
                             </button>
                             <button type="button" class="am-btn am-btn-warning am-btn-xs" onclick="{
                                 // 调用service.jsp实现 通过java调用shell nginx -t 再通过解析弹出效果提示
+                                alert('抱歉，测试版本不开放此功能');
                             }">校验
                             </button>
                             <button type="button" class="am-btn am-btn-secondary am-btn-xs" onclick="{
                                 // 调用service.jsp实现 通过java调用shell nginx -s reload
-                            }">生效</button>
+                                alert('抱歉，测试版本不开放此功能');
+                            }">生效
+                            </button>
                             <span class="am-fr">参考文档: <a href="https://cloud.tencent.com/developer/doc/1158"
                                                          target="_blank">https://cloud.tencent.com/developer/doc/1158</a></span>
                         </div>
