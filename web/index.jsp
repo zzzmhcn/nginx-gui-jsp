@@ -52,7 +52,7 @@
     String[] nginx_version = {"nginx", "-v"};
     String[] nginx_log_size = {"du", "-sh", String.valueOf(request.getAttribute("baseLogPath"))};
     // awk '{print $1}' /var/log/nginx/access.log | sort | uniq -c | sort -nr -k1 | head -n 10
-    String[] top10ip = {"awk","'{print $1}'", String.valueOf(request.getAttribute("nginxLogPath"))
+    String[] top10ip = {"awk", "'{print $1}'", String.valueOf(request.getAttribute("nginxLogPath"))
             , "|", "sort", "|", "uniq", "-c", "|", "sort", "-nr", "-k1", "|", "head", "-n", "10"};
 %>
 <%!
@@ -84,9 +84,10 @@
         }
         return result;
     }
+
     public String getLineNum(String filePath) {
-        String[] command = {"wc","-l",filePath};
-        return shell(command).replace(filePath,"").trim();
+        String[] command = {"wc", "-l", filePath};
+        return shell(command).replace(filePath, "").trim();
     }
 
     /**
@@ -112,9 +113,9 @@
         return result;
     }
 
-    public String getStatusNum(int num){
-        String line = httpGet("https://zzzmh.cn/nginx/status");
-        return num == 0 ? line.substring(line.indexOf("connections:") + "connections:".length(), line.indexOf("server")).trim()
+    public String getStatusNum(String nginxStatusUrl, int num) {
+        String line = httpGet(nginxStatusUrl);
+        return line == null || "".equals(line) ? "" : num == 0 ? line.substring(line.indexOf("connections:") + "connections:".length(), line.indexOf("server")).trim()
                 : line.substring(line.indexOf("Waiting:") + "Waiting:".length()).trim();
     }
 %>
@@ -260,8 +261,8 @@
                             <div class="am-panel am-panel-secondary">
                                 <div class="am-panel-hd">实时数据</div>
                                 <div class="am-panel-bd">
-                                    连接数：<%=getStatusNum(0)%>
-                                    等待数：<%=getStatusNum(1)%>
+                                    TCP连接数：<%=getStatusNum(String.valueOf(request.getAttribute("nginxStatusUrl")), 0)%>
+                                    等待连接数：<%=getStatusNum(String.valueOf(request.getAttribute("nginxStatusUrl")), 1)%>
                                 </div>
                             </div>
                         </div>
@@ -275,10 +276,10 @@
                         </div>
                         <div class="am-u-md-6">
                             <div class="am-panel am-panel-secondary">
-                                <div class="am-panel-hd">当日汇总</div>
+                                <div class="am-panel-hd">今日汇总</div>
                                 <div class="am-panel-bd">
-                                    总访问次数：<%=getLineNum(String.valueOf(request.getAttribute("nginxLogPath")))%>
-                                    总异常次数：<%=getLineNum(String.valueOf(request.getAttribute("nginxErrorLogPath")))%>
+                                    访问次数：<%=getLineNum(String.valueOf(request.getAttribute("nginxLogPath")))%>
+                                    异常次数：<%=getLineNum(String.valueOf(request.getAttribute("nginxErrorLogPath")))%>
                                 </div>
                             </div>
                         </div>
@@ -391,6 +392,7 @@
                                                     r = Pattern.compile(pattern);
                                                     m = r.matcher(line);
                                                     tr = "";
+                                                    count++;
                                                     if (m.find()) {
                                                         tr += "<tr";
                                                         if ("304".equals(m.group(4))) {
@@ -398,32 +400,16 @@
                                                         } else if (!"200".equals(m.group(4))) {
                                                             tr += " class='am-danger' ";
                                                         }
-                                                        tr += "";
                                                         tr += ">";
-                                                        tr += "<td>";
-                                                        tr += m.group(1);
-                                                        tr += "</td>";
-                                                        tr += "<td>";
-                                                        tr += sdf.format(dateFormat.parse(m.group(2)));
-                                                        tr += "</td>";
-                                                        tr += "<td>";
-                                                        tr += m.group(3);
-                                                        tr += "</td>";
-                                                        tr += "<td>";
-                                                        tr += m.group(4);
-                                                        tr += "</td>";
-                                                        tr += "<td>";
-                                                        tr += m.group(5);
-                                                        tr += "</td>";
-                                                        tr += "<td>";
-                                                        tr += m.group(6);
-                                                        tr += "</td>";
-                                                        tr += "<td title='" + m.group(7) + "'>";
-                                                        tr += m.group(7);
-                                                        tr += "</td>";
+                                                        tr += "<td>" + m.group(1) + "</td>";
+                                                        tr += "<td>" + sdf.format(dateFormat.parse(m.group(2))) + "</td>";
+                                                        tr += "<td>" + m.group(3) + "</td>";
+                                                        tr += "<td>" + m.group(4) + "</td>";
+                                                        tr += "<td>" + m.group(5) + "</td>";
+                                                        tr += "<td>" + m.group(6) + "</td>";
+                                                        tr += "<td title='" + m.group(7) + "'>" + m.group(7) + "</td>";
                                                         tr += "</tr>";
                                                         out.print(tr);
-                                                        count++;
                                                     }
                                                 }
                                                 nextend--;
@@ -431,15 +417,9 @@
                                             nextend--;
                                             rf.seek(nextend);
                                         }
+                                        rf.close();
                                     } catch (Exception e) {
                                         e.printStackTrace();
-                                    } finally {
-                                        try {
-                                            if (rf != null)
-                                                rf.close();
-                                        } catch (IOException e) {
-                                            e.printStackTrace();
-                                        }
                                     }
                                 %>
                                 </tbody>
