@@ -1,16 +1,19 @@
 <%@ page language="java" contentType="text/html; charset=UTF-8" pageEncoding="UTF-8" %>
 <%@ page trimDirectiveWhitespaces="true" %>
 <%@ page import="java.io.*" %>
-<%@ page import="java.util.regex.Pattern" %>
-<%@ page import="java.util.regex.Matcher" %>
+<%@ page import="java.util.*" %>
+<%@ page import="java.util.regex.*" %>
 <%@ page import="java.text.SimpleDateFormat" %>
-<%@ page import="java.util.Locale" %>
+<%@ page import="java.net.*" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <fmt:setBundle basename="config" var="config" scope="request"/>
 <fmt:message key="md5Token" var="md5Token" bundle="${config}" scope="request"/>
+<fmt:message key="baseLogPath" var="baseLogPath" bundle="${config}" scope="request"/>
 <fmt:message key="nginxLogPath" var="nginxLogPath" bundle="${config}" scope="request"/>
+<fmt:message key="nginxErrorLogPath" var="nginxErrorLogPath" bundle="${config}" scope="request"/>
 <fmt:message key="nginxConfigPath" var="nginxConfigPath" bundle="${config}" scope="request"/>
+<fmt:message key="nginxBlocksIpPath" var="nginxBlocksIpPath" bundle="${config}" scope="request"/>
 <fmt:message key="nginxStatusUrl" var="nginxStatusUrl" bundle="${config}" scope="request"/>
 <%
     request.setCharacterEncoding("UTF-8");
@@ -29,27 +32,30 @@
     }
     // 密码校验与配置文件对比 WEB-INF/classes/config.properties
     if (!String.valueOf(request.getAttribute("md5Token")).equalsIgnoreCase(token)) {
-        // 密码错误直接报403
-        response.sendError(403);
+        // 密码错误送回第一步重输
+        response.sendRedirect("/");
         return;
     }
-    // 当前页面
+    // 所在页面 默认index
     String active = request.getParameter("a");
-    // 最大日志行数
+    // 日志最大行数 默认200
     String maxLine = request.getParameter("m");
-    // 日志文件选择
-    String status = request.getParameter("s");
     active = active == null ? "index" : active;
     maxLine = maxLine == null ? "200" : maxLine;
-    status = status == null ? "0" : status;
     // 存入attr
     request.setAttribute("active", active);
     request.setAttribute("token", token);
     request.setAttribute("maxLine", maxLine);
-    request.setAttribute("status", status);
+    // 获取基本系统信息
+    Properties props = System.getProperties();
+    // Shell 命令
+    String[] nginx_version = {"nginx", "-v"};
+    String[] nginx_log_size = {"du", "-sh", String.valueOf(request.getAttribute("baseLogPath"))};
+    // awk '{print $1}' /var/log/nginx/access.log | sort | uniq -c | sort -nr -k1 | head -n 10
+    String[] top10ip = {"awk","'{print $1}'", String.valueOf(request.getAttribute("nginxLogPath"))
+            , "|", "sort", "|", "uniq", "-c", "|", "sort", "-nr", "-k1", "|", "head", "-n", "10"};
 %>
 <%!
-    String[] nginx_version = {"nginx","-v"};
     /**
      * Java 执行shell命令方法
      * 传入参数例子
@@ -66,17 +72,50 @@
             BufferedReader reader = new BufferedReader(new InputStreamReader(process.getInputStream()));
             while (true) {
                 String line = reader.readLine();
-                if(line == null) {
+                if (line == null) {
                     break;
                 }
-                result += line + ' ';
+                result += line + "<br>";
             }
             process.destroy();
             reader.close();
-        }catch (Exception e){
+        } catch (Exception e) {
             e.printStackTrace();
         }
         return result;
+    }
+    public String getLineNum(String filePath) {
+        String[] command = {"wc","-l",filePath};
+        return shell(command).replace(filePath,"").trim();
+    }
+
+    /**
+     * Java 请求Url 简易版本
+     * 用于请求nginx status
+     */
+    public String httpGet(String url) {
+        String result = "";
+        try {
+            URL realUrl = new URL(url);
+            URLConnection connection = realUrl.openConnection();
+            connection.connect();
+            BufferedReader in = new BufferedReader(new InputStreamReader(
+                    connection.getInputStream()));
+            String line;
+            while ((line = in.readLine()) != null) {
+                result += line + "<br>";
+            }
+            in.close();
+        } catch (Exception e) {
+            e.printStackTrace();
+        }
+        return result;
+    }
+
+    public String getStatusNum(int num){
+        String line = httpGet("https://zzzmh.cn/nginx/status");
+        return num == 0 ? line.substring(line.indexOf("connections:") + "connections:".length(), line.indexOf("server")).trim()
+                : line.substring(line.indexOf("Waiting:") + "Waiting:".length()).trim();
     }
 %>
 <html lang="zh-CN">
@@ -87,10 +126,11 @@
     <title>Nginx 控制台</title>
     <link rel="icon" type="image/jpeg"
           href="data:image/jpeg;base64,/9j/4AAQSkZJRgABAQEAYABgAAD/2wBDAAgGBgcGBQgHBwcJCQgKDBQNDAsLDBkSEw8UHRofHh0aHBwgJC4nICIsIxwcKDcpLDAxNDQ0Hyc5PTgyPC4zNDL/2wBDAQkJCQwLDBgNDRgyIRwhMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjIyMjL/wAARCAAQABADASIAAhEBAxEB/8QAHwAAAQUBAQEBAQEAAAAAAAAAAAECAwQFBgcICQoL/8QAtRAAAgEDAwIEAwUFBAQAAAF9AQIDAAQRBRIhMUEGE1FhByJxFDKBkaEII0KxwRVS0fAkM2JyggkKFhcYGRolJicoKSo0NTY3ODk6Q0RFRkdISUpTVFVWV1hZWmNkZWZnaGlqc3R1dnd4eXqDhIWGh4iJipKTlJWWl5iZmqKjpKWmp6ipqrKztLW2t7i5usLDxMXGx8jJytLT1NXW19jZ2uHi4+Tl5ufo6erx8vP09fb3+Pn6/8QAHwEAAwEBAQEBAQEBAQAAAAAAAAECAwQFBgcICQoL/8QAtREAAgECBAQDBAcFBAQAAQJ3AAECAxEEBSExBhJBUQdhcRMiMoEIFEKRobHBCSMzUvAVYnLRChYkNOEl8RcYGRomJygpKjU2Nzg5OkNERUZHSElKU1RVVldYWVpjZGVmZ2hpanN0dXZ3eHl6goOEhYaHiImKkpOUlZaXmJmaoqOkpaanqKmqsrO0tba3uLm6wsPExcbHyMnK0tPU1dbX2Nna4uPk5ebn6Onq8vP09fb3+Pn6/9oADAMBAAIRAxEAPwDtNXvNd8WSa5ZWV7HZQ6fKIEt14a6JLDBfPBO3gdDmqfhjW9a0SDQo7i5+02upXD232edSHt9rheG69+h9KPFGia1o0OuSW9t9ptdRuUuhcwMQ9uVYtyvXv1HpVrSrTXfF02h313Yx2UGnymZ7huDdElSSExwTt5PTn8K4/e5ut/8Ag/5HhfvPbdef52+L7tvl8z//2Q==">
-    <%-- 七牛云提供免费CDN AmazeUI https cdn --%>
+    <%-- 七牛云公共 cdn --%>
     <link href="https://cdn.staticfile.org/amazeui/2.7.2/css/amazeui.min.css" rel="stylesheet">
     <link href="https://cdn.staticfile.org/highlight.js/9.15.6/styles/github.min.css" rel="stylesheet">
     <style>
+        <%-- 全局css --%>
         body {
             font: 14px/1.5 "Helvetica Neue", "Helvetica,Arial", "Microsoft Yahei", "Hiragino Sans GB", "HeitiSC", "WenQuanYi Micro Hei", sans-serif;
         }
@@ -173,7 +213,7 @@
     <%-- 中间部分 --%>
     <div class="am-u-md-11 am-u-md-push-1">
         <div class="am-g">
-            <div class="am-u-sm-12 am-u-sm-centered">
+            <div class="am-u-sm-12 am-u-sm-centered am-animation-fade am-animation-delay-1">
                 <div class="am-cf am-article">
                     <div class="am-u-md-12">
                         <ol class="am-breadcrumb">
@@ -186,7 +226,63 @@
                         </ol>
                     </div>
                     <c:if test="${active == 'index'}">
-                        <h1>首页</h1>
+                        <div class="am-u-md-6">
+                            <div class="am-panel am-panel-secondary">
+                                <div class="am-panel-hd">基本信息</div>
+                                <table class="am-table">
+                                    <tbody>
+                                    <tr>
+                                        <td class="am-u-md-4">操作系统</td>
+                                        <td class="am-u-md-8"><%=props.getProperty("os.name")%>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="am-u-md-4">Java 版本</td>
+                                        <td class="am-u-md-8"><%=props.getProperty("java.version")%>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="am-u-md-4">Nginx 版本</td>
+                                        <td class="am-u-md-8"><%=shell(nginx_version).replace("nginx version:", "").trim()%>
+                                        </td>
+                                    </tr>
+                                    <tr>
+                                        <td class="am-u-md-4">Nginx 日志总量</td>
+                                        <td class="am-u-md-8"><%=shell(nginx_log_size)
+                                                .replace(String.valueOf(request.getAttribute("baseLogPath")), "").trim()%>
+                                        </td>
+                                    </tr>
+                                    </tbody>
+                                </table>
+                            </div>
+                        </div>
+                        <div class="am-u-md-6">
+                            <div class="am-panel am-panel-secondary">
+                                <div class="am-panel-hd">实时数据</div>
+                                <div class="am-panel-bd">
+                                    连接数：<%=getStatusNum(0)%>
+                                    等待数：<%=getStatusNum(1)%>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="am-u-md-6">
+                            <div class="am-panel am-panel-secondary">
+                                <div class="am-panel-hd">当日前十IP</div>
+                                <div class="am-panel-bd">
+                                    <%=shell(top10ip)%>
+                                </div>
+                            </div>
+                        </div>
+                        <div class="am-u-md-6">
+                            <div class="am-panel am-panel-secondary">
+                                <div class="am-panel-hd">当日汇总</div>
+                                <div class="am-panel-bd">
+                                    总访问次数：<%=getLineNum(String.valueOf(request.getAttribute("nginxLogPath")))%>
+                                    总异常次数：<%=getLineNum(String.valueOf(request.getAttribute("nginxErrorLogPath")))%>
+                                </div>
+                            </div>
+                        </div>
+
                     </c:if>
                     <c:if test="${active == 'nginxConfig'}">
                         <div class="am-u-md-12">
@@ -200,15 +296,15 @@
                             }">取消
                             </button>
                             <button type="button" class="am-btn am-btn-success am-btn-xs" onclick="{
-                                // 调用service.jsp实现 把配置信息转base64回传到本页面
-                                if(confirm('修改Nginx配置有可能造成系统异常\n点击确认后操作不可逆\n是否确认？')){
+                                    // 调用service.jsp实现 把配置信息转base64回传到本页面
+                                    if(confirm('修改Nginx配置有可能造成系统异常\n点击确认后操作不可逆\n是否确认？')){
                                     var nc = window.btoa(window.encodeURIComponent($('#nginx-config').text()));
                                     jQuery.post('service.jsp',{t:'${token}',m:'saveNc',nc:nc},function(res){
-                                        alert(res);
-                                        location.reload();
+                                    alert(res);
+                                    location.reload();
                                     });
-                                }
-                            }">保存
+                                    }
+                                    }">保存
                             </button>
                             <button type="button" class="am-btn am-btn-warning am-btn-xs" onclick="{
                                 // 调用service.jsp实现 通过java调用shell nginx -t 再通过解析弹出效果提示
@@ -237,12 +333,7 @@
                     </c:if>
                     <c:if test="${active == 'nginxLogs'}">
                         <div class="am-u-md-12" style="margin-bottom: 6px;">
-                            <label>状态过滤：</label>
-                            <select id="status" data-am-selected="{btnSize: 'xs'}">
-                                <option value="0">全部</option>
-                                <option value="1" ${status == 1 ? 'selected': ''}>正常</option>
-                                <option value="2" ${status == 2 ? 'selected': ''}>异常</option>
-                            </select>
+                                <%-- 这里开太高会导致内存溢出等问题 --%>
                             <label>显示条数：</label>
                             <select id="maxLine" data-am-selected="{btnSize: 'xs'}">
                                 <option value="200" ${maxLine == 200 ? 'selected': ''}>200</option>
@@ -301,40 +392,38 @@
                                                     m = r.matcher(line);
                                                     tr = "";
                                                     if (m.find()) {
-                                                        if ("0".equals(request.getAttribute("status")) ||
-                                                                ("1".equals(request.getAttribute("status")) && "200".equals(m.group(4))) ||
-                                                                ("2".equals(request.getAttribute("status")) && !"200".equals(m.group(4)))) {
-                                                            tr += "<tr";
-                                                            if (!"200".equals(m.group(4))) {
-                                                                tr += " class='am-danger' ";
-                                                            }
-                                                            tr += "";
-                                                            tr += ">";
-                                                            tr += "<td>";
-                                                            tr += m.group(1);
-                                                            tr += "</td>";
-                                                            tr += "<td>";
-                                                            tr += sdf.format(dateFormat.parse(m.group(2)));
-                                                            tr += "</td>";
-                                                            tr += "<td>";
-                                                            tr += m.group(3);
-                                                            tr += "</td>";
-                                                            tr += "<td>";
-                                                            tr += m.group(4);
-                                                            tr += "</td>";
-                                                            tr += "<td>";
-                                                            tr += m.group(5);
-                                                            tr += "</td>";
-                                                            tr += "<td>";
-                                                            tr += m.group(6);
-                                                            tr += "</td>";
-                                                            tr += "<td title='" + m.group(7) + "'>";
-                                                            tr += m.group(7);
-                                                            tr += "</td>";
-                                                            tr += "</tr>";
-                                                            out.print(tr);
-                                                            count++;
+                                                        tr += "<tr";
+                                                        if ("304".equals(m.group(4))) {
+                                                            tr += " class='am-active' ";
+                                                        } else if (!"200".equals(m.group(4))) {
+                                                            tr += " class='am-danger' ";
                                                         }
+                                                        tr += "";
+                                                        tr += ">";
+                                                        tr += "<td>";
+                                                        tr += m.group(1);
+                                                        tr += "</td>";
+                                                        tr += "<td>";
+                                                        tr += sdf.format(dateFormat.parse(m.group(2)));
+                                                        tr += "</td>";
+                                                        tr += "<td>";
+                                                        tr += m.group(3);
+                                                        tr += "</td>";
+                                                        tr += "<td>";
+                                                        tr += m.group(4);
+                                                        tr += "</td>";
+                                                        tr += "<td>";
+                                                        tr += m.group(5);
+                                                        tr += "</td>";
+                                                        tr += "<td>";
+                                                        tr += m.group(6);
+                                                        tr += "</td>";
+                                                        tr += "<td title='" + m.group(7) + "'>";
+                                                        tr += m.group(7);
+                                                        tr += "</td>";
+                                                        tr += "</tr>";
+                                                        out.print(tr);
+                                                        count++;
                                                     }
                                                 }
                                                 nextend--;
@@ -381,13 +470,14 @@
        data-am-offcanvas>
         <span class="am-sr-only">导航</span>
     </a>
-    <%-- 七牛云免费 cdn --%>
+    <%-- 七牛云公共 cdn --%>
     <script src="https://cdn.staticfile.org/jquery/2.2.4/jquery.min.js"></script>
     <script src="https://cdn.staticfile.org/amazeui/2.7.2/js/amazeui.min.js"></script>
     <script src="https://cdn.staticfile.org/highlight.js/9.15.6/highlight.min.js"></script>
     <script src="https://cdn.staticfile.org/Base64/1.0.2/base64.min.js"></script>
     <script>
-        // 顶部加载条效果
+        <%-- 全局js --%>
+        // 顶部加载条
         $.AMUI.progress.start();
         window.onload = function () {
             $.AMUI.progress.done();

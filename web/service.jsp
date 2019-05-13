@@ -1,11 +1,8 @@
 <%@ page contentType="text/html;charset=UTF-8" language="java" %>
 <%@ page trimDirectiveWhitespaces="true" %>
-<%@ page import="java.io.BufferedWriter" %>
-<%@ page import="java.io.File" %>
-<%@ page import="java.io.FileOutputStream" %>
-<%@ page import="java.io.OutputStreamWriter" %>
-<%@ page import="java.net.URLDecoder" %>
-<%@ page import="java.util.Base64" %>
+<%@ page import="java.io.*" %>
+<%@ page import="java.net.*" %>
+<%@ page import="java.util.*" %>
 <%@ taglib prefix="c" uri="http://java.sun.com/jsp/jstl/core" %>
 <%@ taglib prefix="fmt" uri="http://java.sun.com/jsp/jstl/fmt" %>
 <fmt:setBundle basename="config" var="config" scope="request"/>
